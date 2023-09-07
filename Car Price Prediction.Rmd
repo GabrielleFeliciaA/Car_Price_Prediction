@@ -1,0 +1,814 @@
+---
+title: 'Forecasting Car Prices with Linear Regression: A Data-Driven Approach'
+author: "Gabrielle Felicia Ariyanto"
+date: '2022-09-02'
+output: html_document
+---
+
+### **EXPLORATORY DATA ANALYSIS & DATA PRE-PROCESSING**
+```{r}
+#load data
+carPriceDataFrame <- read.csv("./CarPrice.csv")
+```
+
+#### View the data's dimension and information
+```{r}
+dim(carPriceDataFrame)
+```
+The dataset has 205 instances and 13 attributes.
+```{r}
+str(carPriceDataFrame)
+```
+
+1. CarID          : Each observation identifier (the number of row) -> Data type: Integer
+2. Symboling      : Insurance risk rating (categorized in -2,-1,0,1,2, and 3) -> Data type : Integer
+3. CarName        : Name of car -> Data type : Character
+4. FuelType       : Type of car fuel (categorized in gas and diesel) -> Data type : Character
+5. Aspiration     : Type of air intake used in a car (categorized in turbo and std) -> Data Type : Character
+6. CarBody        : Car body type (categorized in convertible, hardtop, hatchback, sedan, and wagon) -> Data type : Character
+7. WheelBase      : The horizontal distance between the front wheels and the rear wheels of car -> Data type : Numeric
+8. CarWidth       : The Width of car -> Data type : Numeric
+9. CurbWeight     : The weight of car with full fuel tank and all standard equipments, without passanger or any baggage-> Data type : Integer
+10. CylinderNumber : Number of cylinder the car has(categorized in four, eight, five, six, three, twelve, and two) -> Data type : Character
+11. HorsePower     : The car engine's power -> Data type : Integer
+12. Citympg        : Measures how many miles a car could go through per gallon inside a city (with stopping and braking) -> Data type : Integer
+13. Price          : The car price -> Data type : Numeric
+
+
+##### Displays a two-by-two plot showing the proportion of attributes versus to the total number of records (`Record number in dataset`) in the data set. The `Record number in dataset` is assumed as a frequency:
+```{r}
+#get wheelBase attribute from the data and store it to 'carWheelBaseData' variable
+carWheelBaseData <- carPriceDataFrame$WheelBase
+#get carWidth attribute from the data and store it to 'carWidthData' variable
+carWidthData <- carPriceDataFrame$CarWidth
+#get FuelType attribute from the data and store it to 'carFuelTypeData' variable
+carFuelTypeData <- carPriceDataFrame$FuelType
+#get CylinderNumber attribute from the data and store it to 'carCylinderNumberData' variable
+carCylinderNumberData <- carPriceDataFrame$CylinderNumber
+
+#set two-by-two plot array using mfrow
+par(mfrow=c(2,2))
+#plot Wheelbase VS it's Record Number at the top left
+plot(carWheelBaseData,main="wheelbase",xlab="Record number in dataset",col='sienna3')
+#plot carwidth VS it's Record Number at the top right
+plot(carWidthData,main="carwidth",xlab="Record number in dataset",col='darkgray')
+#plot fueltype VS it's Record Number at the lower left
+plot(as.integer(as.factor(carFuelTypeData)),main="fueltype",xlab="Record number in dataset",ylab="fuel type",las=1,col='darkgreen')
+#plot CylinderNumber VS it's Record Number at the lower right
+plot(as.integer(as.factor(carCylinderNumberData)),main="CylinderNumber",xlab="Record number in dataset",ylab="Cylinder Number",las=1,col='darkblue')
+```
+
+```{r}
+#set two-by-two plot array using mfrow
+par(mfrow=c(2,2))
+#plot Wheelbase VS it's Record Number at the top left
+hist(carWheelBaseData,main="wheelbase",xlab="Record number in dataset",col='sienna3')
+#plot carwidth VS it's Record Number at the top right
+hist(carWidthData,main="carwidth",xlab="Record number in dataset",col='darkgray')
+#plot fueltype VS it's Record Number at the lower left
+plot(as.factor(carFuelTypeData),horiz=TRUE,main="fueltype",xlab="Record number in dataset",ylab="fuel type",las=1,col='darkgreen')
+#plot CylinderNumber VS it's Record Number at the lower right
+plot(as.factor(carCylinderNumberData),horiz=TRUE,main="CylinderNumber",xlab="Record number in dataset",ylab="Cylinder Number",las=1,col='darkblue',cex.names=0.8)
+```
+
+Here is the minimum and maximum value of wheelBase attribute and carWidth attribute.
+```{r}
+cat("Minimum value of wheel base : ",min(carWheelBaseData),"\n")
+cat("Maximum value of wheel base : ",max(carWheelBaseData),"\n")
+
+cat("Minimum value of car width : ",min(carWidthData),"\n")
+cat("Maximum value of car width : ",max(carWidthData),"\n")
+```
+
+```
+__Analysis:__
+From the output above, the wheelbase,carwidth,fueltype, and cylinder number attribute are not sorted. 
+- The wheelbase attribute data is ranging from 86.6 to 120.9 with the most frequent wheelbase is from 95-100.
+- The car width attribute data is ranging from 60.3 to 72.3 with the most frequent car width is from 63-64.
+- The fueltype attribute is divided into 2 categories, they are gas and diesel, which from the output above, the most frequent fueltype attribute is gas.
+- The cylinder number attribute is divided into 7 categories, they are two, twelve, three, six, four, five, and eight, which from the output above, the most frequent cylinder number attribute is four followed by six. Most of the data are modern cars which usually equipped with four cylinder number and sport cars which usually equipped with six cylinder number.
+```
+
+#### Display a mosaic plot to see the relationship between the variables `Carbody` and `CylinderNumber` in the `CarPrice` dataset.
+```{r}
+#get Carbody variable from the data and store it to 'carBodycolumn' variable
+carBodycolumn <- carPriceDataFrame$CarBody
+#get CylinderNumber variable from the data and store it to 'CylinderNumber' variable
+cylinderNumbercolumn <- carPriceDataFrame$CylinderNumber
+#plot the relationship between the variables `Carbody` and `CylinderNumber` in the `carPriceDataFrame`
+mosaicplot(carBodycolumn~cylinderNumbercolumn,las=1,off=35,xlab="Carbody",ylab="CylinderNumber",main="Carbody VS CylinderNumber",color=colors()[35:40])
+```
+
+```
+__Analysis:__
+The most frequent car body is sedan. The most frequent cylinder number is four. All of the car body, categorized as convertible, hardtop, hatchback, sedan, and wagon mostly have four cylinder number. Eight cylinder number mostly found on convertible car body followed by hardtop. Five and six cylinder number mostly found on hardtop car body. Three and two cylinder number mostly found on hatchback car body. And lastly, twelve cylinder number mostly found on sedan car body.
+
+This also support general knowledge of hatchback car with usually smaller size is still feasible with two or three (small) cylinder number. Moreover, twelve cylinder number cars which resulting more power and speed usually found on high-end sedan sport cars. 
+```
+
+##### Detect univariate outliers for `wheelbase` attribute
+Detect outliers using the three-sigma edit rule
+```{r}
+#three-sigma edit rule
+
+#get wheelbase attribute from the carPriceDataFrame and store it to the wheelBaseData variable
+wheelBaseData<-carPriceDataFrame$WheelBase
+
+#get the mean of wheelbase attribute
+wheelBaseDataMean <-mean(wheelBaseData, na.rm=TRUE)
+
+#get the standard deviation of wheelbase attribute
+wheelBaseDataSd <-sd(wheelBaseData, na.rm=TRUE)
+
+
+#define the upper and lower limit for the three-sigma edit rule to find outliers.
+#The formula for three-sigma edit rule is (mean - t x standardDeviation) to find the lower limit and (mean + t x standardDeviation) to find the upper limit with t=3.
+t <- 3
+upperLimit <- wheelBaseDataMean+t*wheelBaseDataSd
+lowerLimit <- wheelBaseDataMean-t*wheelBaseDataSd
+
+#plot the wheelbase data
+plot(wheelBaseData ,xlab="Record Number In Dataset", ylab="wheel base",main = "Three-sigma Edit Rule Plot", ylim=c(50,130))
+#draw horizontal lines at the mean
+abline(h = wheelBaseDataMean,lty="dashed", lwd=1, col="darkslateblue")
+#draw the upper and lower outlier detection limits for the three-sigma edit rule
+abline(h = upperLimit, lty="dotted", lwd=2, col="red")
+abline(h = lowerLimit, lty="dotted", lwd=2, col="red")
+```
+
+Detect outliers using the hampel identifier
+```{r}
+#Hampel identifier
+
+#get the median of wheelbase attribute
+wheelBaseDataMedian <-median(wheelBaseData, na.rm=TRUE)
+
+#get the MAD of wheelbase attribute
+wheelBaseDataMAD <-mad(wheelBaseData, na.rm=TRUE)
+
+#define the upper and lower limit for the Hampel identifier to find outliers.
+#The formula of Hampel identifier is  (median - t x MAD) to find the lower limit and (median + t x MAD) to find the upper limit with t=3.
+t <- 3
+H_UpperLimit <- wheelBaseDataMedian+t*wheelBaseDataMAD
+H_LowerLimit <- wheelBaseDataMedian-t*wheelBaseDataMAD
+
+#plot the wheelbase data
+plot(wheelBaseData ,xlab="Record Number In Dataset", ylab="wheel base",main = "Hampel Identifier Plot", ylim=c(50,130))
+#draw horizontal lines at the median
+abline(h = wheelBaseDataMedian,lty="dashed", lwd=1, col="darkslateblue")
+#draw the upper and lower outlier detection limits for the Hampel identifier
+abline(h = H_UpperLimit, lty="dotted", lwd=2, col="red")
+abline(h = H_LowerLimit, lty="dotted", lwd=2, col="red")
+```
+
+Detect outliers using boxplot
+```{r}
+boxplot(wheelBaseData,main = "Boxplot Rule")
+
+```
+
+Below are the summary of the three method for detecting the outliers. For a comparison, the plot are also generated side by side.
+```{r}
+#building three sigma rule function
+ThreeSigmaRule <- function(attribute,t=3) {
+  meanAttribute <- mean(attribute, na.rm = TRUE)
+  stdAttribute <- sd(attribute, na.rm = TRUE)
+  unusualnessThreshold = t*stdAttribute
+  upperLimit <- meanAttribute+unusualnessThreshold
+  lowerLimit <- meanAttribute-unusualnessThreshold
+  return (list(name="ThreeSigma Edit Rule",attribute=attribute,upperLimit=upperLimit, lowerLimit=lowerLimit,typical = meanAttribute))
+}
+
+#building hampel identifier function
+HampelIdentifier <- function(attribute, t = 3) {
+  medianAttribute <- median(attribute, na.rm = TRUE)
+  madAttribute <- mad(attribute, na.rm = TRUE)
+  unusualnessThreshold = t*madAttribute
+  upperLimit <- medianAttribute +unusualnessThreshold
+  lowerLimit <- medianAttribute - unusualnessThreshold
+  return(list(name="Hampel Identifier",attribute=attribute,upperLimit = upperLimit, lowerLimit = lowerLimit,typical = medianAttribute))
+}
+
+#building boxplot rule function
+BoxplotRule <- function(attribute, t = 1.5) {
+  Q1 <- quantile(attribute, na.rm = TRUE,probs=0.25,names=FALSE)
+  Q3 <- quantile(attribute, na.rm = TRUE,probs=0.75,names=FALSE)
+  IQR <- Q3-Q1
+  unusualnessThreshold =t * IQR
+  upperLimit <- Q3 + unusualnessThreshold
+  lowerLimit <- Q1 - unusualnessThreshold
+  return(list(name="Boxplot",attribute=attribute,upperLimit = upperLimit, lowerLimit = lowerLimit,typicalLower = Q1, typicalUpper=Q3))
+}   
+
+#build outliers summary of each technique detection
+summarizeDetail <- function(name,x, up,down){
+  dataLabel <- rep("Normal", length(x))
+  indexLowOutlier <- which(x < down)
+  indexUpOutlier <- which(x > up)
+  dataLabel[indexLowOutlier] <- "LowOutlier"
+  dataLabel[indexUpOutlier] <- "UpOutlier"
+  indexOutlier <- union(indexLowOutlier, indexUpOutlier)
+  valuesOutlier <- x[indexOutlier]
+  dataLabel <- dataLabel[indexOutlier]
+  totalOutliers <- length(indexOutlier)
+  
+  return (
+    list(
+      name = name,
+      totalOutliers = totalOutliers,
+      upperLimit = up,
+      lowerLimit = down,
+      indexOutlier = indexOutlier,
+      valuesOutlier = valuesOutlier,
+      dataLabel = dataLabel
+    )
+  )
+}
+
+#build a function that represent all detection outliers result in a dataframe and plot for each technique in a one canvas.
+detectOutliers <- function(attribute) {
+  threeSigmaBound <- ThreeSigmaRule(attribute)
+  HampelBound <- HampelIdentifier(attribute)
+  boxplotBound <- BoxplotRule(attribute)
+  
+  plotDataList<-list(threeSigmaBound,HampelBound,boxplotBound)
+  details <- list(summarizeDetail("ThreeSigma",attribute, threeSigmaBound$upperLimit, threeSigmaBound$lowerLimit),
+               summarizeDetail("Hampel",attribute, HampelBound$upperLimit, HampelBound$lowerLimit),
+               summarizeDetail("BoxplotRule",attribute, boxplotBound$upperLimit, boxplotBound$lowerLimit))
+  
+  summary<-data.frame()
+  for(detail in details){
+      summary <-rbind.data.frame(summary,data.frame(
+          method = detail["name"],
+          totalOutliers = detail["totalOutliers"],
+          lowerLimit = detail["lowerLimit"],
+          upperLimit = detail["upperLimit"]
+      ))
+  }
+  
+  par(mfrow=c(1,3))
+  for(plotData in plotDataList){
+    range=max(plotData$attribute)-min(plotData$attribute)
+    ylimMin = min(c(plotData$attribute,plotData$lowerLimit-0.8*range))
+    ylimMax = max(c(plotData$attribute,plotData$upperLimit+0.8*range))
+    plot(plotData$attribute,
+           xlab="Record Number In Dataset", ylab="wheel base",
+           main = paste(plotData$name," Plot"), ylim=c(ylimMin,ylimMax))
+    if(plotData["name"]=="BoxplotRule"){
+      abline(h = plotData$typicalUpper,lty="dashed", lwd=1, col="darkslateblue")
+      abline(h = plotData$typicalLower,lty="dashed", lwd=1, col="darkslateblue")
+    }else{
+      abline(h = plotData$typical,lty="dashed", lwd=1, col="darkslateblue")
+    }
+    abline(h = plotData$upperLimit, lty="dotted", lwd=2, col="red")
+    abline(h = plotData$lowerLimit, lty="dotted", lwd=2, col="red")
+  }
+ 
+  summary
+}
+
+detectOutliers(carPriceDataFrame$WheelBase)
+```
+
+Below, I also plotted a qq-plot to show which technique is better to detect outlier for this data/case based on it's outlier limit
+```{r}
+library(car)
+#draw qq-plot
+qqPlot(carPriceDataFrame$WheelBase,ylim = c(60,130),main="WheelBase Q-Q Plot")
+abline(h = H_UpperLimit, lty=1, lwd=2)
+abline(h = H_LowerLimit, lty=1, lwd=2)
+abline(h = upperLimit, lty=2, lwd=2)
+abline(h = lowerLimit, lty=2, lwd=2)
+
+Q1 <- quantile(carPriceDataFrame$WheelBase, na.rm = TRUE,probs=0.25,names=FALSE)
+Q3 <- quantile(carPriceDataFrame$WheelBase, na.rm = TRUE,probs=0.75,names=FALSE)
+IQR <- Q3-Q1
+unusualnessThreshold =1.5* IQR
+BupperLimit <- Q3 + unusualnessThreshold
+blowerLimit <- Q1 - unusualnessThreshold
+abline(h = BupperLimit, lty=3, lwd=2)
+abline(h = blowerLimit, lty=3, lwd=2)
+
+legend(x="bottomright",legend=c("Hampel","Three-Sigma","Boxplot"),
+      lty=1:3,cex=0.9)
+```
+
+
+```
+__Analysis:__
+From the QQ-Plot above, it is shown that the three-sigma rule failed to detect the second and the third data as the outliers (from top right, above the boxplot upper limit(dotted line)), although the other two outlier detection mechanism mark it as an outliers. The three-sigma rule also is the least aggressive with only 1 data marked as an outlier.
+
+The hampel identifier is the most aggressive one with 18 data marked as outliers. Compared to the boxplot rule, the hampel identifier seem to be more sensitive to outliers, because from the plot above, many data are laying near on the median line, which will cause the MAD scale estimator to be small or 0. MAD scale estimator is median absolute deviation from the median that represents an outlier-resistant alternative to the standard deviation (standard deviation is affected by extremely high or extremely low data values). Small MAD will result the upper and lower limit of outlier detection tighter to the median (more data that far from median will marked as outliers).
+
+Thus, based on the plots, the boxplot rule give the more reasonable results for detecting ouliers.
+```
+
+Then, I'd like to determine the number of data points identified as outliers by each technique and assess which outlier detection method appears to produce the most reasonable results based on these identified outliers.
+```{r}
+#use subset() function to select and filter values that are declared as outliers by the three-sigma edit rule
+Three_sigmaOutliersDataPoints <- subset(wheelBaseData,wheelBaseData<lowerLimit | wheelBaseData>upperLimit)
+#Compute how many data points are declared outliers by the three-sigma edit rule
+totalThree_SigmaOutliers <- length(Three_sigmaOutliersDataPoints)
+
+#use subset() function to select and filter values that are declared as outliers by the Hampel identifier
+HampelOutliersDataPoints <- subset(wheelBaseData,wheelBaseData<H_LowerLimit | wheelBaseData>H_UpperLimit)
+#Compute how many data points are declared outliers by the Hampel identifier
+totalHampelOutliers <- length(HampelOutliersDataPoints)
+
+
+Q1 <- quantile(wheelBaseData,probs=0.25,na.rm=TRUE)
+Q3 <- quantile(wheelBaseData,probs=0.75,na.rm=TRUE)
+IQR <- Q3-Q1
+boxPlotUpperLimit <- Q3+1.5*IQR
+boxPlotLowerLimit <- Q1-1.5*IQR
+#use subset() function to select and filter values that are declared as outliers by the boxplot rule
+BoxPlotOutliersDataPoints <- subset(wheelBaseData,wheelBaseData<boxPlotLowerLimit | wheelBaseData>boxPlotUpperLimit)
+#Compute how many data points are declared outliers by the boxplot rule
+totalBoxPlotOutliers <- length(BoxPlotOutliersDataPoints)
+
+#Make a dataframe that summarize how many and the values of  data points that detected outliers by each technique 
+OutliersDetected <- c(totalThree_SigmaOutliers,totalHampelOutliers,totalBoxPlotOutliers)
+Method <-c("Three-Sigma","Hampel","BoxPlot")
+
+ThreeSigmaData = ""
+for(idx in seq_along(Three_sigmaOutliersDataPoints)){
+  if(idx>1){
+    ThreeSigmaData = paste(ThreeSigmaData,",")
+  }
+  ThreeSigmaData = paste(ThreeSigmaData,Three_sigmaOutliersDataPoints[idx])
+}
+
+HampelsData = ""
+for(idx in seq_along(HampelOutliersDataPoints)){
+  if(idx>1){
+    HampelsData = paste(HampelsData,",")
+  }
+  HampelsData = paste(HampelsData,HampelOutliersDataPoints[idx])
+}
+
+
+BoxPlotData = ""
+for(idx in seq_along(BoxPlotOutliersDataPoints)){
+  if(idx>1){
+    BoxPlotData = paste(BoxPlotData,",")
+  }
+  BoxPlotData = paste(BoxPlotData,BoxPlotOutliersDataPoints[idx])
+}
+
+values<-c(ThreeSigmaData,HampelsData,BoxPlotData)
+df <- data.frame(Method,OutliersDetected,values)
+df
+```
+```
+__Analysis:__
+From the output above, boxplot gives the more reasonable results for detecting outliers. Two data that detected as outliers with value of 115.6 by boxplot and hampel are not detected by the three-sigma edit rule. From the list of values above, the hampel identifier detects 18 data points as outliers and is likely to aggressive detecting nominal data as outliers. However, the three-sigma edit rule is least aggresive to outliers that only detect 1 data point as the outlier.
+
+As a result, based on the data points, the boxplot rule give the more reasonable results for detecting ouliers.
+```
+
+#### See correlations for all attributes
+```{r}
+library(Hmisc)
+
+#Set the recent dataframe to a new variable in order to be modified separately
+corrCarPriceDataFrame = carPriceDataFrame
+
+#Change character data type variables in the data to numeric data type variables
+corrCarPriceDataFrame$CarName = as.numeric(as.factor(corrCarPriceDataFrame$CarName))
+corrCarPriceDataFrame$FuelType = as.numeric(as.factor(corrCarPriceDataFrame$FuelType))
+corrCarPriceDataFrame$Aspiration = as.numeric(as.factor(corrCarPriceDataFrame$Aspiration))
+corrCarPriceDataFrame$CarBody = as.numeric(as.factor(corrCarPriceDataFrame$CarBody))
+corrCarPriceDataFrame$CylinderNumber = as.numeric(as.factor(corrCarPriceDataFrame$CylinderNumber))
+
+#drop carID column, because the carID variable is not needed 
+corrCarPriceDataFrame = corrCarPriceDataFrame[-c(1)]
+
+#see the correlation among all attribute using rcorr() function
+rcorr(as.matrix(corrCarPriceDataFrame),type=c("pearson","spearman"))
+```
+
+The correlation matrix above is visualized as below
+```{r}
+library(corrplot)
+corrplot(cor(corrCarPriceDataFrame),type='lower',tl.col='black',tl.srt=45,col=COL2('BrBG'))
+```
+
+Below are sorted attribute pair with strongest correlation
+```{r}
+library(lares)
+plot(corr_cross(corrCarPriceDataFrame,rm.na=T,max_pvalue=0.05,type=1,plot=TRUE))
+```
+
+
+```
+__Analysis:__
+From the correlation matrix and visualization above, the strongest correlated attribute pairs are car width and curb weight with value of 0.87. Car width attribute describes the width of the car and curb weight attribute describes the weight of car with full fuel tank and all standard equipments, without passanger or any baggage. Car width and curb weight attribute are strongly positively correlated which means the wider the car, the greater the curb weight and vice versa. In real world, adding more width on car will also add more material, hence the heavier the curb weight.
+
+On the other hand, the strongest negatively correlated attribute pairs are horse power and city mpg with value of -0.80. Horse power measures the car engine's power. City mpg measures how many miles a car could go through per gallon inside a city (with stopping and braking). Strong negative correlation means when one of the attribute is going up, the other one is going down. In this case, it could be assume that more horse power will result in less city miles per gallon, as more power will be generated and vice versa.
+
+Lastly, the weakest correlated attribute pairs are wheelbase attribute and car name attribute with value of 0.01. Car name is the name of the car model. Wheelbase measures the horizontal distance between the front wheels and the rear wheels. Wheelbase usually doesn't determine the car name.
+```
+
+#### Detect missing values in the dataset
+```{r}
+colSums(is.na(carPriceDataFrame))
+```
+This car price data doesn't has any missing values.
+
+#### Change character data type variables in the data to numeric data type variables & drop unnecessary column
+```{r}
+library(Hmisc)
+#Change character data type variables in the data to numeric data type variables
+UpdateCarPriceDataFrame = carPriceDataFrame
+UpdateCarPriceDataFrame$CarName = as.numeric(as.factor(UpdateCarPriceDataFrame$CarName))
+UpdateCarPriceDataFrame$FuelType = as.numeric(as.factor(UpdateCarPriceDataFrame$FuelType))
+UpdateCarPriceDataFrame$Aspiration = as.numeric(as.factor(UpdateCarPriceDataFrame$Aspiration))
+UpdateCarPriceDataFrame$CarBody = as.numeric(as.factor(UpdateCarPriceDataFrame$CarBody))
+UpdateCarPriceDataFrame$CylinderNumber = as.numeric(as.factor(UpdateCarPriceDataFrame$CylinderNumber))
+
+#drop the carID column from the dataset
+UpdateCarPriceDataFrame = UpdateCarPriceDataFrame[-c(1)]
+
+#check whether character data type variables has changed to numeric data type variables or not
+str(UpdateCarPriceDataFrame)
+```
+The carID column is dropped because the carID variable is not needed for any correlation.
+The character data type variables has changed to numeric data type variables.
+
+```{r}
+#see the mean for each numerical variables
+sapply(UpdateCarPriceDataFrame[,c(6:8,10:12)],mean,na.rm=TRUE)
+```
+From the output above, the mean for the wheelBase variable is around 99, the mean for carWidth is around 66, the mean for curbWeight variable is around 2556, the mean for the HorsePower variable is around 104,  the mean for the Citympg variable is around 25, and  the mean for the Price variable is around 13277. The highest mean is the Price variable.
+
+
+#### Check and Remove outliers for price attribute
+```{r}
+#here I use boxplot to see any outliers for price variable
+boxplot(UpdateCarPriceDataFrame$Price,main="Price Boxplot")
+```
+
+There are some data points detected as outliers.
+
+Next, check and see the data anomalies for price attribute using three-sigma edit rule, hampel identifier, and boxplot rule
+```{r}
+#building three sigma rule function
+ThreeSigmaRule <- function(attribute,t=3) {
+  meanAttribute <- mean(attribute, na.rm = TRUE)
+  stdAttribute <- sd(attribute, na.rm = TRUE)
+  unusualnessThreshold = t*stdAttribute
+  upperLimit <- meanAttribute+unusualnessThreshold
+  lowerLimit <- meanAttribute-unusualnessThreshold
+  return (list(name="ThreeSigma Edit",attribute=attribute,upperLimit=upperLimit, lowerLimit=lowerLimit,typical = meanAttribute))
+}
+
+#building hampel identifier function
+HampelIdentifier <- function(attribute, t = 3) {
+  medianAttribute <- median(attribute, na.rm = TRUE)
+  madAttribute <- mad(attribute, na.rm = TRUE)
+  unusualnessThreshold = t*madAttribute
+  upperLimit <- medianAttribute +unusualnessThreshold
+  lowerLimit <- medianAttribute - unusualnessThreshold
+  return(list(name="Hampel",attribute=attribute,upperLimit = upperLimit, lowerLimit = lowerLimit,typical = medianAttribute))
+}
+
+#building boxplot rule function
+BoxplotRule <- function(attribute, t = 1.5) {
+  Q1 <- quantile(attribute, na.rm = TRUE,probs=0.25,names=FALSE)
+  Q3 <- quantile(attribute, na.rm = TRUE,probs=0.75,names=FALSE)
+  IQR <- Q3-Q1
+  unusualnessThreshold =t * IQR
+  upperLimit <- Q3 + unusualnessThreshold
+  lowerLimit <- Q1 - unusualnessThreshold
+  return(list(name="BoxplotRule",attribute=attribute,upperLimit = upperLimit, lowerLimit = lowerLimit,typicalLower = Q1, typicalUpper=Q3))
+}   
+
+#build outliers summary of each technique detection
+summarizeDetail <- function(name,x, up,down){
+  dataLabel <- rep("Normal", length(x))
+  indexLowOutlier <- which(x < down)
+  indexUpOutlier <- which(x > up)
+  dataLabel[indexLowOutlier] <- "LowOutlier"
+  dataLabel[indexUpOutlier] <- "UpOutlier"
+  indexOutlier <- union(indexLowOutlier, indexUpOutlier)
+  valuesOutlier <- x[indexOutlier]
+  dataLabel <- dataLabel[indexOutlier]
+  totalOutliers <- length(indexOutlier)
+  
+  return (
+    list(
+      name = name,
+      totalOutliers = totalOutliers,
+      upperLimit = up,
+      lowerLimit = down,
+      indexOutlier = indexOutlier,
+      valuesOutlier = valuesOutlier,
+      dataLabel = dataLabel
+    )
+  )
+}
+
+#build a function that represent all detection outliers result in a dataframe and plot for each technique in a one canvas.
+detectOutliers <- function(attribute) {
+  threeSigmaBound <- ThreeSigmaRule(attribute)
+  HampelBound <- HampelIdentifier(attribute)
+  boxplotBound <- BoxplotRule(attribute)
+  
+  plotDataList<-list(threeSigmaBound,HampelBound,boxplotBound)
+  details <- list(summarizeDetail("ThreeSigma",attribute, threeSigmaBound$upperLimit, threeSigmaBound$lowerLimit),
+               summarizeDetail("Hampel",attribute, HampelBound$upperLimit, HampelBound$lowerLimit),
+               summarizeDetail("BoxplotRule",attribute, boxplotBound$upperLimit, boxplotBound$lowerLimit))
+  
+  summary<-data.frame()
+  for(detail in details){
+      summary <-rbind.data.frame(summary,data.frame(
+          method = detail["name"],
+          totalOutliers = detail["totalOutliers"],
+          lowerLimit = detail["lowerLimit"],
+          upperLimit = detail["upperLimit"]
+      ))
+  }
+  
+  par(mfrow=c(1,3))
+  for(plotData in plotDataList){
+    range=max(plotData$attribute)-min(plotData$attribute)
+    ylimMin = min(c(plotData$attribute,plotData$lowerLimit-0.8*range))
+    ylimMax = max(c(plotData$attribute,plotData$upperLimit+0.8*range))
+    plot(plotData$attribute,
+           xlab="Record Number In Dataset", ylab="wheel base",
+           main = paste(plotData$name," Rule Plot"), ylim=c(ylimMin,ylimMax))
+    if(plotData["name"]=="BoxplotRule"){
+      abline(h = plotData$typicalUpper,lty="dashed", lwd=1, col="darkslateblue")
+      abline(h = plotData$typicalLower,lty="dashed", lwd=1, col="darkslateblue")
+    }else{
+      abline(h = plotData$typical,lty="dashed", lwd=1, col="darkslateblue")
+    }
+    abline(h = plotData$upperLimit, lty="dotted", lwd=2, col="red")
+    abline(h = plotData$lowerLimit, lty="dotted", lwd=2, col="red")
+  }
+ 
+  summary
+}
+
+detectOutliers(UpdateCarPriceDataFrame$Price)
+```
+The three-sigma detect 3 data points as outliers.
+Hampel identifier detect 18 data points as outliers.
+Boxplot rule detect 15 data points as outliers.
+
+
+Remove any outliers in the price attribute detected by the boxplot rule
+```{r}
+x <- boxplot(UpdateCarPriceDataFrame$Price,outline=FALSE,main="Price Boxplot")
+print(x$out)
+outRm<-UpdateCarPriceDataFrame[!UpdateCarPriceDataFrame$Price %in% x$out,]
+```
+
+The outlier of price attribute has been removed.
+
+#### Visualized relation between key variables
+```{r}
+canvas <- layout(matrix(c(1,2,3,4),nrow=2,byrow=TRUE))
+
+plot(carPriceDataFrame$WheelBase,carPriceDataFrame$Price,main="WheelBase VS Price",xlab="WheelBase",ylab="Price")
+plot(carPriceDataFrame$CarWidth,carPriceDataFrame$HorsePower,main="CarWidth VS HorsePower",xlab="CarWidth",ylab="HorsePower")
+plot(carPriceDataFrame$CurbWeight,carPriceDataFrame$Price,main="CurbWeight VS Price",xlab="CurbWeight",ylab="Price")
+plot(carPriceDataFrame$HorsePower,carPriceDataFrame$CurbWeight,main="HorsePower VS CurbWeight",xlab="HorsePower",ylab="CurbWeight")
+```
+
+From the output above, it reflect that curbweight and price variables are related. Horse power and curbweight variable also seems related.
+
+### **DATA SPLITTING**
+```{r}
+library(caret)
+set.seed(1)
+#create training data set 70% for building model and testing set 30% for model evaluation
+trainingIndex = createDataPartition(outRm$Price,p=0.7,list=FALSE)
+testingSet = outRm[-trainingIndex, ]
+trainingSet = outRm[trainingIndex, ]
+cat("Testing Set Dimention data  : ",dim(testingSet),"\n")
+cat("Training Set Dimention data : ",dim(trainingSet))
+```
+
+### **DATA MODELLING**
+```{r}
+#Build summarize information from multiple models
+summarizeModelMetric <- function(models, modelsSummaryRowNames) {
+  summ = summary(model1)
+  rse = sigma(model1)
+  pvalue = pf(summary(model1)$fstatistic[1],summary(model1)$fstatistic[2],summary(model1)$fstatistic[3],lower.tail=FALSE)
+  
+  modelsSummary <- data.frame(matrix(ncol = 5, nrow = 0))
+  colnames(modelsSummary) <-c("RSE", "FSTAT", "PVALUE", "R2", "ADJR2")
+  for(model in models) {
+    summ = summary(model)
+    rse = sigma(model)
+    pvalue = pf(summ$fstatistic[1],summ$fstatistic[2],summ$fstatistic[3],lower.tail=FALSE)
+    modelsSummary[nrow(modelsSummary) + 1,] <- c(
+      RSE = rse, FSTAT = summ$fstatistic["value"], PVALUE=pvalue, R2=summ["r.squared"], ADJR2=summ["adj.r.squared"])
+    
+  }
+  
+  rownames(modelsSummary)<-modelsSummaryRowNames
+  
+  return (modelsSummary)
+}
+
+
+#Build modeling function
+modelingFunction <- function(formula, trainingData, testingData, isLogPrice = FALSE, isPrint=TRUE) {
+  model1=lm(formula,trainingData)
+  if (isPrint) print(summary(model1))
+  if (isPrint) plot(model1)
+
+  testingData$predicted <- predict(model1, testingData)
+  if (isLogPrice == TRUE) {
+    actualPrediction <- data.frame(testingData$Price, exp(testingData$predicted), testingData$Price - exp(testingData$predicted))
+  } else {
+    actualPrediction <- data.frame(testingData$Price, testingData$predicted, testingData$Price - testingData$predicted)
+  }
+  names(actualPrediction) <- c ("Price", "Predicted", "Residuals")
+  if (isPrint) print(cor(actualPrediction))
+  if (isPrint) print(head(actualPrediction,n=10))
+  
+  return (model1)    
+}
+
+```
+
+#### **DATA MODELLING - MODEL1**
+I tried to model the dependent variables with all of the predictors variables
+```{r}
+#Model1
+model1 = modelingFunction(Price~., trainingSet,testingSet)
+
+```
+
+Then, we can improve the model performance above by checking each attribute correlation
+```{r}
+#check correlation
+rcorr(as.matrix(trainingSet),type=c("pearson","spearman"))
+```
+Symboling, CarName, FuelType, Aspiration, CarBody, CylinderNumber variables have a weak correlation to the dependent variables(Price).
+
+Hence, I remove those variables from the data.
+```{r}
+cleanTrainingSet = trainingSet[-c(1:5,9)]
+cleanTestingSet = testingSet[-c(1:5,9)]
+rcorr(as.matrix(cleanTrainingSet),type=c("pearson","spearman"))
+```
+
+#### **DATA MODELLING - MODEL2**
+Then I tried to build model2 using the clean training data
+```{r}
+#Model2
+model2=modelingFunction(Price~., cleanTrainingSet,cleanTestingSet)
+```
+The output of this model2 shows that the F-statistics is increased to 104.3 and the predictor has highly significant p values. This model is better than previous model(model1).
+
+If I check the normality, it can be seen that the dependent variables doesn't normally distributed(bell-shape).
+```{r}
+#check normality
+hist.data.frame(cleanTrainingSet)
+```
+
+So, I tried to do optimization by using log() function to the dependent variable (Price)
+
+
+#### **DATA MODELLING - MODEL3**
+In the next model,I use the natural log to the price variable in the training data using log() and see the change in performance of the model.
+```{r}
+logPriceTrainingSet=cleanTrainingSet
+logPriceTrainingSet$Price = log(logPriceTrainingSet$Price)
+#Model3
+model3= modelingFunction(Price~., logPriceTrainingSet,cleanTestingSet, isLogPrice = TRUE)
+```
+The output of this model3 shows that the F-statistics is increased to 146.4 and the predictor has highly significant p values. This model is better than previous model(model2).
+But by looking at the model3 Signif. codes, the WheelBase and Citympg attributes are not significant to the model, so I exlude WheelBase and Citympg.
+
+
+Here, I also check the linearity between each independent variables to the dependent variable
+```{r}
+pairs(~ Price+WheelBase+CarWidth+CurbWeight+HorsePower+Citympg, data=logPriceTrainingSet, main = "Car Price Data")
+```
+
+CurbWeight and HorsePower are good linear variables.
+
+
+#### **DATA MODELLING - MODEL4**
+Then I try to fit the dependent variable with CurbWeight and HorsePower variables in model4
+```{r}
+#Model4
+model4 = modelingFunction(Price~CurbWeight+HorsePower, cleanTrainingSet,cleanTestingSet)
+```
+
+The output of this model4 shows that the F-statistics is increased to 224.9 and the predictor has highly significant p values. This model is better than previous model(model3).
+
+
+#### **DATA MODELLING - MODEL5**
+Then below in model5, I use the natural log to the price variable and fit it with CurbWeight and HorsePower variables in the training data and see the change in performance of the model
+```{r}
+logcleanTrainingSet = cleanTrainingSet
+logcleanTrainingSet$Price = log(logcleanTrainingSet$Price)
+logcleanTestingSet = cleanTestingSet
+model5= modelingFunction(Price~CurbWeight+HorsePower, logcleanTrainingSet,logcleanTestingSet, isLogPrice = TRUE)
+
+```
+
+The output of this model5 shows that the F-statistics is increased to 326.3 and the predictor has highly significant p values. This model is better than previous model(model4).
+
+
+#### **DATA MODELLING - MODEL6**
+Then below in model6, I use the natural log to the price variable and fit it with HorsePower variables in the training data and see the change in performance of the model
+```{r}
+logcleanTrainingSet = cleanTrainingSet
+logcleanTrainingSet$Price = log(logcleanTrainingSet$Price)
+logcleanTestingSet = cleanTestingSet
+model6 = modelingFunction(Price~HorsePower, logcleanTrainingSet,logcleanTestingSet, isLogPrice = TRUE)
+```
+The output of this model6 shows that the F-statistics is decreased to 177.7. This model6 is become worse.
+
+#### **THE BEST DATA MODEL RESULT & EVALUATION**
+Below I build function to see the comparison between all models that I have made above easily.
+```{r}
+summarizeModelMetric(list(model1, model2, model3, model4, model5, model6), 
+                     list("Model1 = Price~.", "Model2 = Price~WheelBase+CarWidth+CurbWeight+HorsePower+Citympg","Model3 = log(Price) ~.","Model4 = Price~CurbWeight+HorsePower","Model5 = log(Price)~CurbWeight+HorsePower","Model6 = log(Price)~Horsepower"))
+
+```
+
+From the output above, I choose `Model5` as the best fit because it has small Residual std.Error value, highest F-stat value, lowest P-value, and high adjusted R-squared value.
+
+
+#### Best model result and interpretation
+```{r}
+finalModel = model5
+testingSet$predicted <- predict(finalModel, testingSet)
+summary(finalModel)
+
+#plot the predicted vs actual price
+plot(exp(testingSet$predicted),(testingSet$Price), xlab="Predicted", ylab="Actual Price", col="blue")
+abline(a=0,b=1)
+
+```
+
+```
+__Explanation:__
+From the output above, I choose Model5 as the best fit because it has small Residual standard error value, highest F-stat value, lowest P-value, and high adjusted R-squared value. 
+
+To see whether our model is good or not, we can see from:
+1. The higher adjusted R-squared value means the more significant the independent variable to be use for prediction the dependent variable.
+2. The smaller residual standard error means the prediction are more better.
+3. The higher the F-stat, the prediction are better.
+4. The lower the p-value, the prediction are better.
+
+From the summary of my final model, it can be seen that my final model has 0.1701 residual standard error value that seems small enough, 0.8303 Adjusted R-squared value that seems high enough, 326.3 F-statistic value that seems high enough, and 1.321704e-51 that seems small enough.
+
+The best model, model5, is doing linear regression for car price using the curbweight and horsepower attributes. The linear regression model is trained with log transformed car price.
+
+From the plot that describe the predicted vs actual values of price, many data points lies nearly close to the estimated regression line, indicating that the regression model does an pratically good job of fitting the data.
+```
+
+#### The equation of the best fitting line (best model).
+```{r}
+cat("log(Price) = 7.393 + CurbWeight*(0.0006371) + HorsePower*(0.002942)")
+```
+
+```
+__Explanation:__
+
+The line equation for the best model is:
+  log(Price) = 7.393 + CurbWeight*(0.0006371) + HorsePower*(0.002942)
+
+From the line equation, I found significant relationships between the Price and the CurbWeight and HorsePower variables. 
+I found a 0.00064% increase in the Price for every 1% increase in CurbWeight, and a 0.0029% increase in the Price for every 1% increase in HorsePower.
+```
+
+#### Best Model Evaluation
+```{r}
+finalModel =model5
+testingSet$predicted <- predict(finalModel, testingSet)
+actualPrediction <- data.frame(testingSet$Price, exp(testingSet$predicted), testingSet$Price - exp(testingSet$predicted))
+names(actualPrediction) <- c ("Price", "Predicted", "Residuals")
+print(cor(actualPrediction))
+print(head(actualPrediction,n=10))
+```
+
+```
+__Explanation:__
+Based from the correlation accuracy of the models above, it show that the accuracy of the model is around 82%. This model performs well due to its high accuracy.
+
+
+```
+
+```{r}
+finalModel = (model5)
+hist(rstudent(finalModel))
+```
+
+```
+__Explanation:__
+In addition, by looking at the residual histogram above, the model has a nearly normally distribution(roughly bell-shape), although not perfect, but nothing too extreme which means that this model is good enough.
+
+As a result, this model can be deploy because this model has a pretty good accuracy of around 82%, but this model could be improve by exploring more attribute (independent variable) related to car price or adding more data for training the model.
+
+```
